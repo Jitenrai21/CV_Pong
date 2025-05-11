@@ -1,0 +1,12 @@
+CV_PONG/
+├── utils/
+│   ├── hand_tracker.py       # Handles webcam & hand detection (MediaPipe)
+│   ├── game.py               # Pong game logic (pygame or OpenCV window)  
+│   └── utils.py              # Helper functions (e.g., coordinate mapping)
+│
+├── tests/
+│   └── hand_tracker_test.py
+│
+├── game.py                   # Pong game logic (pygame or OpenCV window)
+├── requirements.txt          # List of dependencies
+└── README.md                 # Project overview and instructions
