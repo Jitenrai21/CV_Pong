@@ -7,6 +7,6 @@ CV_PONG/
 ├── tests/
 │   └── hand_tracker_test.py
 │
-├── game.py                   # Pong game logic (pygame or OpenCV window)
+├── game.py                   # main file after integration
 ├── requirements.txt          # List of dependencies
 └── README.md                 # Project overview and instructions

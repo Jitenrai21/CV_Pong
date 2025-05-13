@@ -11,8 +11,8 @@ PADDLE_WIDTH = 15
 PADDLE_HEIGHT = 120
 BALL_SIZE = 20
 PADDLE_SPEED = 10
-BALL_SPEED_X = 4
-BALL_SPEED_Y = 4
+BALL_SPEED_X = 6
+BALL_SPEED_Y = 6
 SPEED_INCREMENT = 0.5
 
 # Colors
@@ -92,9 +92,9 @@ class Game:
         self.player.move(new_y)
 
     def update_opponent_paddle(self, ball_y):
-        target_y = ball_y - PADDLE_HEIGHT // 2
+        target_y = ball_y - PADDLE_HEIGHT // 2 
         current_y = self.opponent.rect.y
-        new_y = current_y + 0.7 * (target_y - current_y)
+        new_y = current_y + 0.2 * (target_y - current_y)  # Lower smoothing factor
         self.opponent.move(new_y)
 
     def update_score(self):
@@ -121,46 +121,68 @@ class Game:
                 self.running = False
                 break
 
+            original_height, original_width = frame.shape[:2]
+            
             hand_position, frame = self.hand_tracker.get_hand_position(frame)
-            if hand_position:
-                self.update_paddle(hand_position[1] - PADDLE_HEIGHT // 2)
-                frame_height, frame_width = frame.shape[:2]
 
-                scaled_x = int(map_range(hand_position[0], 0, frame_width, 0, WINDOW_WIDTH))
-                scaled_y = int(map_range(hand_position[1], 0, frame_height, 0, WINDOW_HEIGHT))
+            # Keep frame as is for hand tracking
+            hand_position, _ = self.hand_tracker.get_hand_position(frame)
+
+            # AFTER tracking, resize for display
+            frame = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT))
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_surface = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
+
+            if hand_position:
+                # self.update_paddle(hand_position[1] - PADDLE_HEIGHT // 2)
+                # frame_height, frame_width = frame.shape[:2]
+                finger_x, finger_y = hand_position
+
+
+                # scaled_x = int(map_range(hand_position[0], 0, frame_width, 0, WINDOW_WIDTH))
+                # scaled_y = int(map_range(hand_position[1], 0, frame_height, 0, WINDOW_HEIGHT))
+                
+                # Map original camera coordinates to game window
+                scaled_x = int(map_range(finger_x, 0, original_width, 0, WINDOW_WIDTH))
+                scaled_y = int(map_range(finger_y, 0, original_height, 0, WINDOW_HEIGHT))
+
                 self.update_paddle(scaled_y - PADDLE_HEIGHT // 2)
                 pygame.draw.circle(self.screen, (0, 255, 0), (scaled_x, scaled_y), 10)
 
                 #adding smoothing to hand tracking to reduce jitter
-                previous_y = getattr(self, 'previous_y', hand_position[1])
-                smoothed_y = smooth_value(hand_position[1], previous_y, smoothing_factor=0.2)
-                scaled_y = int(smoothed_y / frame_height * WINDOW_HEIGHT)
-                self.update_paddle(scaled_y - PADDLE_HEIGHT // 2)
-                scaled_x = int(hand_position[0] / frame_width * WINDOW_WIDTH)
-                pygame.draw.circle(self.screen, (0, 255, 0), (scaled_x, scaled_y), 10)
-                self.previous_y = smoothed_y
-            
-            # Display webcam feed in a separate OpenCV window
-            cv2.imshow("Webcam Feed", frame)
+                # previous_y = getattr(self, 'previous_y', hand_position[1])
+                # smoothed_y = smooth_value(hand_position[1], previous_y, smoothing_factor=0.2)
+                # scaled_y = int(smoothed_y / frame_height * WINDOW_HEIGHT)
+                # self.update_paddle(scaled_y - PADDLE_HEIGHT // 2)
+                # scaled_x = int(hand_position[0] / frame_width * WINDOW_WIDTH)
+                # pygame.draw.circle(self.screen, (0, 255, 0), (scaled_x, scaled_y), 10)
+                # self.previous_y = smoothed_y
 
-            # Check for 'q' key press to exit (optional, for convenience)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                self.running = False
+                previous_y = getattr(self, 'previous_y', scaled_y)
+                smoothed_y = smooth_value(scaled_y, previous_y, smoothing_factor=0.6)
+                self.previous_y = smoothed_y
+
+                # Update paddle
+                self.update_paddle(smoothed_y - PADDLE_HEIGHT // 2)
+
+                # Draw fingertip pointer
+                pygame.draw.circle(self.screen, (0, 255, 0), (scaled_x, int(smoothed_y)), 10)
 
             self.update_opponent_paddle(self.ball.rect.centery)
             self.ball.move()
             self.ball.check_collision(self.player, self.opponent)
             self.update_score()
+            
+            self.screen.blit(frame_surface, (0, 0))  # Webcam feed as background
 
-            self.screen.fill(BLACK)
             self.player.draw(self.screen)
             self.opponent.draw(self.screen)
             self.ball.draw(self.screen, self.player, self.opponent)
             self.draw_score()
 
             # Drawing the green pointer in the game window if hand detected
-            if hand_position:
-                pygame.draw.circle(self.screen, (0, 255, 0), (50, hand_position[1]), 10)  # x=50 for left side
+            # if hand_position:
+            #     pygame.draw.circle(self.screen, (0, 255, 0), (scaled_x, scaled_y), 10)
 
             pygame.display.flip()
             self.clock.tick(60)

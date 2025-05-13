@@ -11,7 +11,7 @@ def map_range(value, in_min, in_max, out_min, out_max):
     return out_min + (scaled_value * out_range)
 
 
-def smooth_value(current_value, previous_value, smoothing_factor=0.4):
+def smooth_value(current_value, previous_value, smoothing_factor=0.7):
     """
     Smooth the transition between previous and current values.
     smoothing_factor: 0 (no change) to 1 (instant jump)
